@@ -1,0 +1,49 @@
+# Runs the full test suite on REAL Windows, Linux and macOS, runs run.ps1 under Windows PowerShell 5.1 and PowerShell 7,
+# and runs the browser UI tests in Chromium, Firefox and WebKit. Push this repo to GitHub: Actions -> "CI" shows the result.
+name: CI
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix: { os: [windows-latest, ubuntu-latest, macos-latest], python: ["3.10", "3.12"] }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.python }}" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: python -m pip install -r requirements.txt
+      - run: python -m pytest tests -q
+      - run: node --test tests/voice_matcher.test.mjs
+  powershell:
+    runs-on: windows-latest
+    strategy: { matrix: { shell: [powershell, pwsh] } }       # powershell = Windows PowerShell 5.1, pwsh = PowerShell 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: run.ps1 -Test
+        shell: ${{ matrix.shell }}
+        run: .\run.ps1 -Test
+      - name: run.ps1 starts the server and serves the app (both profiles)
+        shell: ${{ matrix.shell }}
+        run: |
+          foreach ($p in "atrocity_victims","correctional") {
+            $job = Start-Job { param($d,$p) Set-Location $d; .\run.ps1 -Profile $p -NoBrowser -Port 8500 } -ArgumentList (Get-Location).Path,$p
+            Start-Sleep -Seconds 25
+            $m = Invoke-RestMethod http://127.0.0.1:8500/api/meta
+            if ($m.profile.key -ne $p) { throw "wrong profile: $($m.profile.key)" }
+            Get-Process python* | Stop-Process -Force -ErrorAction SilentlyContinue
+            Stop-Job $job -ErrorAction SilentlyContinue; Remove-Job $job -Force -ErrorAction SilentlyContinue
+          }
+  browsers:
+    strategy: { fail-fast: false, matrix: { browser: [chromium, firefox, webkit] } }
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: python -m pip install -r requirements.txt playwright && python -m playwright install --with-deps ${{ matrix.browser }}
+      - run: python tests/browser_smoke.py ${{ matrix.browser }}
