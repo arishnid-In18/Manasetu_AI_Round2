@@ -2,6 +2,11 @@
 
 *Bridging Minds to Mental Health Support. AI detects the signal. Humans understand the person.*
 
+Demo video link: https://drive.google.com/file/d/1O_JNPd_PdYEzmaoT49NRBftRibovd1S7/view?usp=drivesdk
+Pitch video link: https://drive.google.com/file/d/1CGxCgOwvrxEDWK1_akVwJ4_xu6u-NFa1/view?usp=drivesdk
+Live demo link: https://manasetu-ai-round2-1.onrender.com
+
+
 **Synthetic data only. Not a medical device. Not clinically validated.** The questionnaire (`DEMO-WB-1`) and every threshold are placeholders.
 
 ## Which population?
